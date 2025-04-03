@@ -1,7 +1,7 @@
 #include "../Comportamientos_Jugador/auxiliar.hpp"
 #include <iostream>
 #include "motorlib/util.h"
-
+//1
 Action ComportamientoAuxiliar::think(Sensores sensores)
 {
 	Action accion = IDLE;
