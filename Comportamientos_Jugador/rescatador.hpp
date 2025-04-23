@@ -11,15 +11,41 @@ class ComportamientoRescatador : public Comportamiento
 {
 
 public:
+  /*************************************************************************/
+  //inicializar variables de estado niveles 0,1,4
   ComportamientoRescatador(unsigned int size = 0) : Comportamiento(size)
   {
-    // Inicializar Variables de Estado Niveles 0,1,4
+    last_action = IDLE;
+    tiene_zapatillas = false;
+    giro45izq = 0;
+
+    for( int i=0; i<size; i++){
+      vector<bool> tmp;
+      for( int j=0; j<size; j++){
+        tmp.push_back(false);
+      }
+      visitada.push_back(tmp);
+    }
+
+    for( int i=0; i<16; i++){
+      visitada_local.push_back(false);
+    }
+
+    vistazo1 = false;
+    vistazo2 = false;
+    giro_der = 0;
   }
+
+  /*************************************************************************/
   ComportamientoRescatador(std::vector<std::vector<unsigned char>> mapaR, std::vector<std::vector<unsigned char>> mapaC) : Comportamiento(mapaR,mapaC)
   {
     // Inicializar Variables de Estado Niveles 2,3
   }
+
+  /*************************************************************************/
   ComportamientoRescatador(const ComportamientoRescatador &comport) : Comportamiento(comport) {}
+
+  /*************************************************************************/
   ~ComportamientoRescatador() {}
 
   Action think(Sensores sensores);
@@ -33,7 +59,16 @@ public:
   Action ComportamientoRescatadorNivel_4(Sensores sensores);
 
 private:
-  // Variables de Estado
+  // Variables de Estado, son la memoria que tendra el agente de iteraciones/movimientos anteriores
+  Action last_action; //ultimo movimiento realizado por el agente
+  bool tiene_zapatillas;
+  int giro45izq;  // Turn_L + Turn_SR, cuando haya que hacerlo, hacemos Turn_L y ponemos 
+                  // la variable a uno para indicar que estamos en medio de un Turn_SL 
+                  // y qe se haga Turn_SR en el proximo paso
+  vector<vector<bool>> visitada; //vector con true si la casilla es visitada y false si no (tam=16)
+  vector<bool> visitada_local;
+  bool vistazo1, vistazo2;
+  int giro_der;
 };
 
 #endif
