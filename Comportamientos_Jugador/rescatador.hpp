@@ -20,20 +20,25 @@ public:
     giro45izq = 0;
 
     for( int i=0; i<size; i++){
-      vector<bool> tmp;
+      vector<int> tmp;
       for( int j=0; j<size; j++){
-        tmp.push_back(false);
+        tmp.push_back(0);
       }
       visitada.push_back(tmp);
     }
 
     for( int i=0; i<16; i++){
-      visitada_local.push_back(false);
+      visitada_local.push_back(0);
     }
+ 
+    // vistazo1 = false;
+    // vistazo2 = false;
 
-    vistazo1 = false;
-    vistazo2 = false;
-    giro_der = 0;
+    umbral = 5;
+    permitidoUmbral = false;
+
+    contadorGiroIzq = 0;
+
   }
 
   /*************************************************************************/
@@ -65,10 +70,14 @@ private:
   int giro45izq;  // Turn_L + Turn_SR, cuando haya que hacerlo, hacemos Turn_L y ponemos 
                   // la variable a uno para indicar que estamos en medio de un Turn_SL 
                   // y qe se haga Turn_SR en el proximo paso
-  vector<vector<bool>> visitada; //vector con true si la casilla es visitada y false si no (tam=16)
-  vector<bool> visitada_local;
-  bool vistazo1, vistazo2;
-  int giro_der;
+  vector<vector<int>> visitada; //vector con true si la casilla es visitada y false si no (tam=16)
+  vector<int> visitada_local;
+  // bool vistazo1, vistazo2;
+  // int giro_der;
+
+  int umbral;
+  bool permitidoUmbral;
+  int contadorGiroIzq;
 };
 
 #endif

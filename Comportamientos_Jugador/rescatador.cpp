@@ -3,6 +3,7 @@
 
 
 #include <iostream>
+#include <algorithm>
 using namespace std;
 
 Action ComportamientoRescatador::think(Sensores sensores)
@@ -40,7 +41,7 @@ int ComportamientoRescatador::interact(Action accion, int valor)
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
 // primero la del centro, izquierda y derecha. Y en orden de importancia de casillas:
 // objetivo, zapatillas(si no las tiene) y camino
-int VeoCasillaInteresanteR_Nivel0( char i, char c, char d, bool zap)
+int VeoCasillaInteresanteR_Nivel0( char i, char c, char d, bool zap, vector<int> v_l, int umbral, bool permitido_umbral )
 {
 	if( c=='X') return 2;
 	else if (i=='X') return 1;
@@ -50,10 +51,27 @@ int VeoCasillaInteresanteR_Nivel0( char i, char c, char d, bool zap)
 		else if (i=='D') return 1;
 		else if (d=='D') return 3;
 	}
-	if (c=='C') return 2;
-	else if (i=='C') return 1;
-	else if (d=='C') return 3;
-	else return 0;
+
+	vector<pair<pair<char,int>, int>> prioridad({ {{c,2},v_l[2]}, {{i,1},v_l[1]} , {{d,3},v_l[3]} } );
+
+	//ordenamos en funcion del valor entero, pero manteniendose en la misma posicion
+	//los enteros que sean iguales (por defecto: {c,i,d})
+	stable_sort(prioridad.begin(), prioridad.end(), 
+	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
+
+	if(permitido_umbral){
+		//devolveremos la casilla con mas prioridad
+		if ( prioridad[0].first.first =='C' ) return prioridad[0].first.second;
+		else if (prioridad[1].first.first=='C' ) return prioridad[1].first.second;
+		else if (prioridad[2].first.first=='C' ) return prioridad[2].first.second;
+		else return 0;
+	}
+	else{
+		if ( prioridad[0].first.first =='C' && prioridad[0].second < umbral ) return prioridad[0].first.second;
+		else if (prioridad[1].first.first=='C' && prioridad[1].second < umbral ) return prioridad[1].first.second;
+		else if (prioridad[2].first.first=='C' && prioridad[2].second < umbral ) return prioridad[2].first.second;
+		else return 0;
+	}
 }
 
 /************************************************************************/
@@ -68,12 +86,12 @@ char ViableR (char casilla, char cota_orig, char cota_dest, bool zap, char agent
 
 /************************************************************************/
 // Actualiza las matrices MapaResultado y MapaCotas
-void SituarSensorEnMapaR(vector<vector<unsigned char>> &m, vector<vector<unsigned char>> &a, vector<vector<bool>> &v, vector<bool> &v_l,
+void SituarSensorEnMapaR(vector<vector<unsigned char>> &m, vector<vector<unsigned char>> &a, vector<vector<int>> &v, vector<int> &v_l,
 						 Sensores sensores)
 {
 	m[sensores.posF][sensores.posC] = sensores.superficie[0];
 	a[sensores.posF][sensores.posC] = sensores.cota[0];
-	v[sensores.posF][sensores.posC] = true;
+	v[sensores.posF][sensores.posC] = v[sensores.posF][sensores.posC]+1;
 	
 	int pos = 1;
 	switch (sensores.rumbo)
@@ -199,6 +217,7 @@ void SituarSensorEnMapaR(vector<vector<unsigned char>> &m, vector<vector<unsigne
 	}
 }
 
+//voy a hacer, cuando se haya pasado mas de 5 veces por una casilla se de una vuelta sobre si misma para 
 /************************************************************************/
 Action ComportamientoRescatador::ComportamientoRescatadorNivel_0(Sensores sensores)
 {
@@ -224,22 +243,32 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_0(Sensores sensor
 		char c = ViableR(sensores.superficie[2], sensores.cota[0], sensores.cota[2], tiene_zapatillas, sensores.agentes[2]);
 		char d = ViableR(sensores.superficie[3], sensores.cota[0], sensores.cota[3], tiene_zapatillas, sensores.agentes[3]);
 
-		int pos = VeoCasillaInteresanteR_Nivel0( i, c, d, tiene_zapatillas);
+		int pos = VeoCasillaInteresanteR_Nivel0( i, c, d, tiene_zapatillas, visitada_local, umbral, permitidoUmbral );
 
 		switch(pos)
 		{	
 			case 2:
 				accion = WALK;
+				contadorGiroIzq = 0;
+				permitidoUmbral = false;
 				break;
 			case 1:			
 				giro45izq = 1;
 				accion = TURN_L;
+				contadorGiroIzq = 0;
+				permitidoUmbral = false;
 				break;
 			case 3:		
 				accion = TURN_SR;
+				contadorGiroIzq = 0;
+				permitidoUmbral = false;
 				break;
 			case 0:            //si no hay ninguna casilla interesante gira hacia la izquierda para seguir buscando
 				accion = TURN_L;
+				contadorGiroIzq++;
+				if( contadorGiroIzq >= 4 ){
+					permitidoUmbral = true;
+				}
 				break;
 		}
 	}
@@ -252,33 +281,27 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_0(Sensores sensor
 
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
-int VeoCasillaInteresanteR_Nivel1( char i, char c, char d, bool zap, vector<bool> v_l)
+int VeoCasillaInteresanteR_Nivel1( char i, char c, char d, bool zap, vector<int> v_l)
 {
 	if (!zap){
 		if( c=='D') return 2;
 		else if (i=='D') return 1;
 		else if (d=='D') return 3;
 	}
-	if ((c=='C' || c=='S' || c=='X' ) && !v_l[2] ) return 2;
-	else if ((i=='C' || i=='S' || i=='X' ) && !v_l[1] ) return 1;
-	else if ((d=='C' || d=='S' || d=='X' ) && !v_l[3]) return 3;
-	else if (c=='C' || c=='S' || c=='X' ) return 2;
-	else if (i=='C' || i=='S' || i=='X' ) return 1;
-	else if (d=='C' || d=='S' || d=='X' ) return 3;
+	
+	vector<pair<pair<char,int>, int>> prioridad({ {{c,2},v_l[2]}, {{i,1},v_l[1]} , {{d,3},v_l[3]} } );
+
+	//ordenamos en funcion del valor entero, pero manteniendose en la misma posicion
+	//los enteros que sean iguales (por defecto: {c,i,d})
+	stable_sort(prioridad.begin(), prioridad.end(), 
+	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
+
+	//devolveremos la casilla con mas prioridad
+	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' ) return prioridad[0].first.second;
+	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' ) return prioridad[1].first.second;
+	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' ) return prioridad[2].first.second;
 	else return 0;
-}
-
-/************************************************************************/
-//Funcion que actualiza la variable de estado conocida, actualizando ese vector
-// con las casillas a las que se tenga vision actualmente
-
-// la idea de este nivel es que se elija con mayor prioridad las casillas de tipo
-// camino desconocidas, tambien hay que tener en cuenta las situaciones en las que vienes de un camino, te encuentras una pared y vuelves por el mismo camino en vez de por un camino que hay a la derecha,
-// hacer algo asi como dar una vuelta entera en busqueda de solo casillas desconocidas antes de volver por el camino anterior: Solucion a esto:
-// cuando no se vean casillas interantes, hacer primero turn_L, si sigue sin haber nada hacer dos turn_R y si siguen si ver nada
-// hacer otro turn_R para volver por el mismo sitio ( mejor primero mirar a la derecha y luego izquierda por lo menos en rescatador)
-void actualizaConocidasR( vector<bool> &c, vector<vector<unsigned char>> &m, Sensores sensores )
-{
+	
 }
 
 
@@ -298,10 +321,10 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_1(Sensores sensor
 		accion = TURN_SR;
 		giro45izq--;
 	}
-	else if( giro_der != 0 ){
-		accion = TURN_SR;
-		giro_der--;
-	}
+	// else if( giro_der != 0 ){
+	// 	accion = TURN_SR;
+	// 	giro_der--;
+	// }
 	else{
 
 		char i = ViableR(sensores.superficie[1], sensores.cota[0], sensores.cota[1], tiene_zapatillas, sensores.agentes[1]);
@@ -314,37 +337,35 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_1(Sensores sensor
 		{	
 			case 2:
 				accion = WALK;
-				vistazo1 = false;
-				vistazo2 = false;
+				// vistazo1 = false;
+				// vistazo2 = false;
 				break;
 			case 1:			
 				giro45izq = 1;
 				accion = TURN_L;
-				vistazo1 = false;
-				vistazo2 = false;
+				// vistazo1 = false;
+				// vistazo2 = false;
 				break;
 			case 3:		
 				accion = TURN_SR;
-				vistazo1 = false;
-				vistazo2 = false;
+				// vistazo1 = false;
+				// vistazo2 = false;
 				break;
-			case 0:            //si no hay ninguna casilla interesante gira hacia la izquierda para seguir buscando
+			case 0:            //si no hay ninguna casilla interesante 
 
-				if(vistazo1){          //iniciamos 4 giros hasta la derecha del todo (para mirar hacia el otro lado)
-					accion = TURN_SR;
-					giro_der = 1;
-					vistazo1 = false;
-					vistazo2 = true;
-				}
-				else if(vistazo2){	  //si en el otro lado no hay nada, volvemos a hacer otro giro para volver por donde hemos venido(mas o menos)
-					accion = TURN_SR;
-					giro_der=1;
-				}
-				else{
-					accion = TURN_L;  //accion inicial al no ver ninguna casilla interesante
-					giro_der = 1;
-					vistazo1 = true;
-				}
+				accion=TURN_L;
+				// if(vistazo1){          //mirar hacia el otro lado, si no hay casilla interesante 2 veces seguidas
+				// 	accion = TURN_L;
+				// 	vistazo1 = false;
+				// 	vistazo2 = true;
+				// }
+				// else if(vistazo2){	  //si en el otro lado no hay nada, volvemos a hacer otro giro para volver por donde hemos venido(mas o menos)
+				// 	accion = TURN_L;
+				// }
+				// else{
+				// 	accion = TURN_SR;  //accion inicial al no ver ninguna casilla interesante
+				// 	vistazo1 = true;
+				// }
 				break;
 		}
 	}

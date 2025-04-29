@@ -19,6 +19,22 @@ public:
     last_action = IDLE;
     tiene_zapatillas = false;
     giro45izq = 0;
+
+    for( int i=0; i<size; i++){
+      vector<int> tmp;
+      for( int j=0; j<size; j++){
+        tmp.push_back(0);
+      }
+      visitada.push_back(tmp);
+    }
+
+    for( int i=0; i<16; i++){
+      visitada_local.push_back(0);
+    }
+
+    umbral = 10;
+    permitidoUmbral = false;
+    contadorGiroCompleto = 0;
   }
 
   /*************************************************************************/
@@ -46,6 +62,13 @@ private:
   Action last_action; 
   bool tiene_zapatillas;
   int giro45izq;
+
+  vector<vector<int>> visitada; //vector con true si la casilla es visitada y false si no (tam=16)
+  vector<int> visitada_local;
+
+  int umbral;
+  bool permitidoUmbral;
+  int contadorGiroCompleto;
 };
 
 #endif

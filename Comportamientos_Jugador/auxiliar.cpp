@@ -1,5 +1,6 @@
 #include "../Comportamientos_Jugador/auxiliar.hpp"
 #include <iostream>
+#include <algorithm>
 #include "motorlib/util.h"
 
 Action ComportamientoAuxiliar::think(Sensores sensores)
@@ -37,15 +38,33 @@ int ComportamientoAuxiliar::interact(Action accion, int valor)
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
 // primero la del centro, izquierda y derecha. Y en orden de importancia de casillas:
 // objetivo y camino
-int VeoCasillaInteresanteA_Nivel0( char i, char c, char d )
+int VeoCasillaInteresanteA_Nivel0( char i, char c, char d, vector<int> v_l, int &umbral, bool &permitido_umbral )
 {
 	if( c=='X') return 2;
 	else if (i=='X') return 1;
 	else if (d=='X') return 3;
-	else if (c=='C') return 2;
-	else if (i=='C') return 1;
-	else if (d=='C') return 3;
-	else return 0;
+
+	vector<pair<pair<char,int>, int>> prioridad({ {{c,2},v_l[2]}, {{i,1},v_l[1]} , {{d,3},v_l[3]} } );
+
+	//ordenamos en funcion del valor entero, pero manteniendose en la misma posicion
+	//los enteros que sean iguales (por defecto: {c,i,d})
+	stable_sort(prioridad.begin(), prioridad.end(), 
+	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
+
+	//devolveremos la casilla con mas prioridad
+	if(permitido_umbral){
+		//devolveremos la casilla con mas prioridad
+		if ( prioridad[0].first.first =='C' ) return prioridad[0].first.second;
+		else if (prioridad[1].first.first=='C' ) return prioridad[1].first.second;
+		else if (prioridad[2].first.first=='C' ) return prioridad[2].first.second;
+		else return 0;
+	}
+	else{
+		if ( prioridad[0].first.first =='C' && prioridad[0].second < umbral ) return prioridad[0].first.second;
+		else if (prioridad[1].first.first=='C' && prioridad[1].second < umbral ) return prioridad[1].first.second;
+		else if (prioridad[2].first.first=='C' && prioridad[2].second < umbral ) return prioridad[2].first.second;
+		else return 0;
+	}
 }
 
 /************************************************************************/
@@ -60,13 +79,13 @@ char ViableA (char casilla, char cota_orig, char cota_dest, char agente_dest)
 
 /************************************************************************/
 // Actualiza las matrices MapaResultado y MapaCotas
-void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigned char>> &a,
+void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigned char>> &a, vector<vector<int>> &v, vector<int> &v_l,
 						 Sensores sensores)
 {
-	// cout << "estoy en situarsensor en matriz de mapa\n";
 	m[sensores.posF][sensores.posC] = sensores.superficie[0];
 	a[sensores.posF][sensores.posC] = sensores.cota[0];
-
+	v[sensores.posF][sensores.posC] = v[sensores.posF][sensores.posC]+1;
+	
 	int pos = 1;
 	switch (sensores.rumbo)
 	{
@@ -75,6 +94,7 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for( int j=-i; j<=i; j++ ){
 				m[sensores.posF - i][sensores.posC + j] = sensores.superficie[pos];
 				a[sensores.posF - i][sensores.posC + j] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - i][sensores.posC + j];
 				pos++;
 			}
 		}
@@ -86,12 +106,14 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for( int j=0; j<=i; j++ ){
 				m[sensores.posF - i][sensores.posC + j] = sensores.superficie[pos];
 				a[sensores.posF - i][sensores.posC + j] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - i][sensores.posC + j];
 				pos++;
 			}
 
 			for( int k = i-1; k>=0; k-- ){
 				m[sensores.posF - k][sensores.posC + i] = sensores.superficie[pos];
 				a[sensores.posF - k][sensores.posC + i] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - k][sensores.posC + i];
 				pos++;
 			}
 		}
@@ -102,6 +124,7 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for( int j=-i; j<=i; j++ ){
 				m[sensores.posF + j][sensores.posC + i] = sensores.superficie[pos];
 				a[sensores.posF + j][sensores.posC + i] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF + j][sensores.posC + i];
 				pos++;
 			}
 		}
@@ -113,12 +136,14 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for (int j = 0; j <= i; ++j) {
 				m[sensores.posF + j][sensores.posC + i] = sensores.superficie[pos];
 				a[sensores.posF + j][sensores.posC + i] = sensores.cota[pos];
-				pos++;
+				v_l[pos] = v[sensores.posF + j][sensores.posC + i];
+ 				pos++;
 			}
 
 			for (int k = i - 1; k >= 0; --k) {
 				m[sensores.posF + i][sensores.posC + k] = sensores.superficie[pos];
 				a[sensores.posF + i][sensores.posC + k] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF + i][sensores.posC + k];
 				pos++;
 			}
 		}
@@ -129,6 +154,7 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for (int j = -i; j <= i; ++j) {
 				m[sensores.posF + i][sensores.posC - j] = sensores.superficie[pos];
 				a[sensores.posF + i][sensores.posC - j] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF + i][sensores.posC - j];
 				pos++;
 			}
 		}
@@ -140,12 +166,14 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for (int j = 0; j <= i; ++j) {
 				m[sensores.posF + i][sensores.posC - j] = sensores.superficie[pos];
 				a[sensores.posF + i][sensores.posC - j] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF + i][sensores.posC - j];
 				pos++;
 			}
 
 			for (int k = i - 1; k >= 0; --k) {
 				m[sensores.posF + k][sensores.posC - i]    = sensores.superficie[pos];
 				a[sensores.posF + k][sensores.posC - i]    = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF + k][sensores.posC - i];
 				pos++;
 			}
 		}
@@ -156,6 +184,7 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for (int j = -i; j <= i; ++j) {
 				m[sensores.posF - j][sensores.posC - i] = sensores.superficie[pos];
 				a[sensores.posF - j][sensores.posC - i] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - j][sensores.posC - i];
 				pos++;
 			}
 		}
@@ -167,11 +196,13 @@ void SituarSensorEnMapaA(vector<vector<unsigned char>> &m, vector<vector<unsigne
 			for (int j = 0; j <= i; ++j) {
 				m[sensores.posF - j][sensores.posC - i] = sensores.superficie[pos];
 				a[sensores.posF - j][sensores.posC - i] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - j][sensores.posC - i];
 				pos++;
 			}
 			for (int k = i - 1; k >= 0; --k) {
 				m[sensores.posF - i][sensores.posC - k] = sensores.superficie[pos];
 				a[sensores.posF - i][sensores.posC - k] = sensores.cota[pos];
+				v_l[pos] = v[sensores.posF - i][sensores.posC - k];
 				pos++;
 			}
 		}
@@ -184,9 +215,9 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_0(Sensores sensores)
 {
 	// El comportamiento de seguir por un Auxiliar por un camino hasta encontrar un puesto base.
 	Action accion;
-
+	
 	//Fase 1, actualizar variables de estado
-	SituarSensorEnMapaA(mapaResultado, mapaCotas, sensores);
+	SituarSensorEnMapaA(mapaResultado, mapaCotas, visitada, visitada_local, sensores);
 
 	//Fase 2, determinar siguiente accion a realizar
 	if( sensores.superficie[0] == 'X' ) {
@@ -202,22 +233,33 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_0(Sensores sensores)
 		char c = ViableA(sensores.superficie[2], sensores.cota[0], sensores.cota[2], sensores.agentes[2]);
 		char d = ViableA(sensores.superficie[3], sensores.cota[0], sensores.cota[3], sensores.agentes[3]);
 
-		int pos = VeoCasillaInteresanteA_Nivel0( i, c, d );
+		int pos = VeoCasillaInteresanteA_Nivel0( i, c, d, visitada_local, umbral, permitidoUmbral );
 
 		switch(pos)
 		{	
 			case 2:
 				accion = WALK;
+				contadorGiroCompleto=0;
+				permitidoUmbral = false;
 				break;
 			case 1:			
 				giro45izq = 6;
 				accion = TURN_SR;
+				contadorGiroCompleto=0;
+				permitidoUmbral = false;
 				break;
 			case 3:		
 				accion = TURN_SR;
+				contadorGiroCompleto=0;
+				permitidoUmbral = false;
 				break;
 			case 0:            //si no hay ninguna casilla interesante hace TURN_SR
 				accion = TURN_SR;
+				contadorGiroCompleto++;
+				if( contadorGiroCompleto >= 8 ){
+					permitidoUmbral = true;
+					contadorGiroCompleto = 0;
+				}
 				break;
 		}
 	}
@@ -230,11 +272,19 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_0(Sensores sensores)
 
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
-int VeoCasillaInteresanteA_Nivel1( char i, char c, char d )
+int VeoCasillaInteresanteA_Nivel1( char i, char c, char d, vector<int> v_l )
 {
-	if (c=='C' || c=='S') return 2;
-	else if (i=='C' || c=='S') return 1;
-	else if (d=='C' || c=='S') return 3;
+	vector<pair<pair<char,int>, int>> prioridad({ {{c,2},v_l[2]}, {{i,1},v_l[1]} , {{d,3},v_l[3]} } );
+
+	//ordenamos en funcion del valor entero, pero manteniendose en la misma posicion
+	//los enteros que sean iguales (por defecto: {c,i,d})
+	stable_sort(prioridad.begin(), prioridad.end(), 
+	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
+
+	//devolveremos la casilla con mas prioridad
+	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' ) return prioridad[0].first.second;
+	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' ) return prioridad[1].first.second;
+	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' ) return prioridad[2].first.second;
 	else return 0;
 }
 
@@ -244,7 +294,7 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_1(Sensores sensores)
 	Action accion;
 
 	//Fase 1: actualizar variables de estado
-	SituarSensorEnMapaA( mapaResultado, mapaCotas, sensores );
+	SituarSensorEnMapaA( mapaResultado, mapaCotas, visitada, visitada_local, sensores );
 
 	//Fase 2: definir proxima accion a realizar
 	if( giro45izq != 0 ){ //estamos en medio de un giro TURN_SL
@@ -257,7 +307,7 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_1(Sensores sensores)
 		char c = ViableA(sensores.superficie[2], sensores.cota[0], sensores.cota[2], sensores.agentes[2]);
 		char d = ViableA(sensores.superficie[3], sensores.cota[0], sensores.cota[3], sensores.agentes[3]);
 
-		int pos = VeoCasillaInteresanteA_Nivel1( i, c, d );
+		int pos = VeoCasillaInteresanteA_Nivel1( i, c, d, visitada_local );
 
 		switch(pos)
 		{	
