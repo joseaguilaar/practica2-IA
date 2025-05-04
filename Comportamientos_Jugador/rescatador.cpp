@@ -743,14 +743,14 @@ int VeoCasillaInteresanteR_Nivel1( bool zap, vector<int> v_l, vector<unsigned ch
 	stable_sort(prioridad.begin(), prioridad.end(), 
 	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
 
-	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' ) return prioridad[0].first.second;
-	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' ) return prioridad[1].first.second;
-	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' ) return prioridad[2].first.second;
-	else if (prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X' ) return prioridad[3].first.second;
-	else if (prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X' ) return prioridad[4].first.second;
-	else if (prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X' ) return prioridad[5].first.second;
-	else if (prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' ) return prioridad[6].first.second;
-	else if (prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X' ) return prioridad[7].first.second;
+	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' || prioridad[0].first.first=='D' ) return prioridad[0].first.second;
+	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' || prioridad[1].first.first=='D' ) return prioridad[1].first.second;
+	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' || prioridad[2].first.first=='D' ) return prioridad[2].first.second;
+	else if (prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X' || prioridad[3].first.first=='D' ) return prioridad[3].first.second;
+	else if (prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X' || prioridad[4].first.first=='D' ) return prioridad[4].first.second;
+	else if (prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X' || prioridad[5].first.first=='D' ) return prioridad[5].first.second;
+	else if (prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' || prioridad[6].first.first=='D' ) return prioridad[6].first.second;
+	else if (prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X' || prioridad[7].first.first=='D' ) return prioridad[7].first.second;
 	else return -1;	
 }
 

@@ -701,8 +701,14 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_0(Sensores sensores)
 
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
-int VeoCasillaInteresanteA_Nivel1( vector<int> v_l, vector<unsigned char> s_l )
+int VeoCasillaInteresanteA_Nivel1( bool zap, vector<int> v_l, vector<unsigned char> s_l )
 {
+	//buscamos zapatillas
+	for( int i=0; i<8 && !zap ; i++ ){
+		if( s_l[i] == 'D' ){
+			return i;
+		}
+	}
 
 	//mejor resultado:
 	vector<pair<pair<char,int>, int>> prioridad({ {{s_l[1],1},v_l[1]-1}, {{s_l[2],2},v_l[2]+1}, {{s_l[0],0},v_l[0]+1}, 
@@ -716,14 +722,14 @@ int VeoCasillaInteresanteA_Nivel1( vector<int> v_l, vector<unsigned char> s_l )
 	stable_sort(prioridad.begin(), prioridad.end(), 
 	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
 
-	if ( prioridad[0].first.first =='C' || prioridad[0].first.first=='S' || prioridad[0].first.first=='X') return prioridad[0].first.second;
-	else if ( prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X') return prioridad[1].first.second;
-	else if ( prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X') return prioridad[2].first.second;
-	else if ( prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X') return prioridad[3].first.second;
-	else if ( prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X') return prioridad[4].first.second;
-	else if ( prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X') return prioridad[5].first.second;
-	else if ( prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' ) return prioridad[6].first.second;
-	else if ( prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X') return prioridad[7].first.second;
+	if ( prioridad[0].first.first =='C' || prioridad[0].first.first=='S' || prioridad[0].first.first=='X' || prioridad[0].first.first=='D' || (zap && prioridad[0].first.first=='B') ) return prioridad[0].first.second;
+	else if ( prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' || prioridad[1].first.first=='D' || (zap && prioridad[1].first.first=='B') ) return prioridad[1].first.second;
+	else if ( prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' || prioridad[2].first.first=='D' || (zap && prioridad[2].first.first=='B') ) return prioridad[2].first.second;
+	else if ( prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X' || prioridad[3].first.first=='D' || (zap && prioridad[3].first.first=='B') ) return prioridad[3].first.second;
+	else if ( prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X' || prioridad[4].first.first=='D' || (zap && prioridad[4].first.first=='B') ) return prioridad[4].first.second;
+	else if ( prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X' || prioridad[5].first.first=='D' || (zap && prioridad[5].first.first=='B') ) return prioridad[5].first.second;
+	else if ( prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' || prioridad[6].first.first=='D' || (zap && prioridad[6].first.first=='B')  ) return prioridad[6].first.second;
+	else if ( prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X' || prioridad[7].first.first=='D' || (zap && prioridad[7].first.first=='B') ) return prioridad[7].first.second;
 	else return -1;
 }
 
@@ -734,6 +740,8 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_1(Sensores sensores)
 	Action accion;
 	
 	//Fase 1, actualizar variables de estado
+	if (sensores.superficie[0] == 'D') tiene_zapatillas = true;
+
 	SituarSensorEnMapaA( mapaResultado, mapaCotas, mapaEntidades, mapaVisitadas, sensores );
 
 	InicializarVisitadaLocalA( mapaResultado, mapaVisitadas, visitada_local, sensores );
@@ -753,7 +761,7 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_1(Sensores sensores)
 
 		ViableA( visitada_local, superficie_local, cotas_local, sensores.cota[0], entidades_local );
 
-		int pos = VeoCasillaInteresanteA_Nivel1( visitada_local, superficie_local );
+		int pos = VeoCasillaInteresanteA_Nivel1( tiene_zapatillas, visitada_local, superficie_local );
 
 		switch(pos)
 		{	
