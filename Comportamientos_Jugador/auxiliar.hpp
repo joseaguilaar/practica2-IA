@@ -18,23 +18,20 @@ public:
   {
     last_action = IDLE;
     tiene_zapatillas = false;
-    giro45izq = 0;
+    giroSR = 0;
 
     for( int i=0; i<size; i++){
       vector<int> tmp;
       for( int j=0; j<size; j++){
         tmp.push_back(0);
       }
-      visitada.push_back(tmp);
+      mapaVisitadas.push_back(tmp);
     }
 
-    for( int i=0; i<16; i++){
-      visitada_local.push_back(0);
-    }
-
-    umbral = 10;
-    permitidoUmbral = false;
-    contadorGiroCompleto = 0;
+    visitada_local.assign(8, 0);
+    superficie_local.assign(8, ' ');
+    cotas_local.assign(8, 0);
+    entidades_local .assign(8, ' ');
   }
 
   /*************************************************************************/
@@ -61,14 +58,16 @@ private:
   // Definir Variables de Estado
   Action last_action; 
   bool tiene_zapatillas;
-  int giro45izq;
+  int giroSR;
 
-  vector<vector<int>> visitada; //vector con true si la casilla es visitada y false si no (tam=16)
-  vector<int> visitada_local;
+  vector<vector<int>> mapaVisitadas; //matriz con el numero de veces que se ha visitado cada casilla
 
-  int umbral;
-  bool permitidoUmbral;
-  int contadorGiroCompleto;
+  //vectores con la informacion de las 8 casillas de alrededor del agente
+  vector<int> visitada_local; 
+  vector<unsigned char> superficie_local; //estos 3 me hacen falta para la funcion viable
+  vector<unsigned char> cotas_local;
+  vector<unsigned char> entidades_local;
+
 };
 
 #endif
