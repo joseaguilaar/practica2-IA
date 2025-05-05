@@ -73,6 +73,9 @@ private:
   vector<unsigned char> cotas_local;
   vector<unsigned char> entidades_local;
 
+  vector<pair<int,bool>> visitada_CV; //vector de pares con las veces visitadas y viabilidad de 
+                                      //las casillas del cono de vision
+
 };
 
 #endif

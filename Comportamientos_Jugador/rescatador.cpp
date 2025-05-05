@@ -722,19 +722,41 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_0(Sensores sensor
 
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
-int VeoCasillaInteresanteR_Nivel1( bool zap, vector<int> v_l, vector<unsigned char> s_l )
-{
+int VeoCasillaInteresanteR_Nivel1( bool zap, vector<int> v_l, vector<unsigned char> s_l, Sensores sensores)
+{	
+	int permite_agua = false;
+
+	for( int i=0; i<16 && !zap; i++ ){
+		if( sensores.superficie[i] == 'D'){
+			permite_agua = true;
+			break;
+		}
+	}
+
+	int rodeados = 0;
 	//buscamos zapatillas
 	for( int i=0; i<8 && !zap ; i++ ){
 		if( s_l[i] == 'D' ){
 			return i;
 		}
 	}
+	for( int i=0; i<8 ; i++ ){
+		if( s_l[i] != 'C' && s_l[i] != 'S' && s_l[i] != 'X' && s_l[i] != 'D' ){
+			rodeados ++;
+		}
+	}
+
+	//cout <<rodeados<<"|";
+	if( rodeados == 8 ){
+		permite_agua = true;
+	}
+
+	
 
 	//mejor resultado:
 	vector<pair<pair<char,int>, int>> prioridad({ {{s_l[1],1},v_l[1]-1}, {{s_l[2],2},v_l[2]+1}, {{s_l[0],0},v_l[0]+1}, 
-												  {{s_l[7],7},v_l[7]+2}, {{s_l[3],3},v_l[3]+2}, {{s_l[6],6},v_l[6]+4}, 
-												  {{s_l[4],4},v_l[4]+4}, {{s_l[5],5},v_l[5]+5}  
+												  {{s_l[7],7},v_l[7]+2}, {{s_l[3],3},v_l[3]+2}, {{s_l[6],6},v_l[6]+3}, 
+												  {{s_l[4],4},v_l[4]+3}, {{s_l[5],5},v_l[5]+5}  
 												});
 
 
@@ -743,14 +765,14 @@ int VeoCasillaInteresanteR_Nivel1( bool zap, vector<int> v_l, vector<unsigned ch
 	stable_sort(prioridad.begin(), prioridad.end(), 
 	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
 
-	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' || prioridad[0].first.first=='D' ) return prioridad[0].first.second;
-	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' || prioridad[1].first.first=='D' ) return prioridad[1].first.second;
-	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' || prioridad[2].first.first=='D' ) return prioridad[2].first.second;
-	else if (prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X' || prioridad[3].first.first=='D' ) return prioridad[3].first.second;
-	else if (prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X' || prioridad[4].first.first=='D' ) return prioridad[4].first.second;
-	else if (prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X' || prioridad[5].first.first=='D' ) return prioridad[5].first.second;
-	else if (prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' || prioridad[6].first.first=='D' ) return prioridad[6].first.second;
-	else if (prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X' || prioridad[7].first.first=='D' ) return prioridad[7].first.second;
+	if ( prioridad[0].first.first =='C'|| prioridad[0].first.first=='S' || prioridad[0].first.first=='X' || prioridad[0].first.first=='D' || (permite_agua && prioridad[0].first.first=='A') ) return prioridad[0].first.second;
+	else if (prioridad[1].first.first=='C' || prioridad[1].first.first=='S' || prioridad[1].first.first=='X' || prioridad[1].first.first=='D' || (permite_agua && prioridad[1].first.first=='A') ) return prioridad[1].first.second;
+	else if (prioridad[2].first.first=='C' || prioridad[2].first.first=='S' || prioridad[2].first.first=='X' || prioridad[2].first.first=='D' || (permite_agua && prioridad[2].first.first=='A') ) return prioridad[2].first.second;
+	else if (prioridad[3].first.first=='C' || prioridad[3].first.first=='S' || prioridad[3].first.first=='X' || prioridad[3].first.first=='D' || (permite_agua && prioridad[3].first.first=='A') ) return prioridad[3].first.second;
+	else if (prioridad[4].first.first=='C' || prioridad[4].first.first=='S' || prioridad[4].first.first=='X' || prioridad[4].first.first=='D' || (permite_agua && prioridad[4].first.first=='A') ) return prioridad[4].first.second;
+	else if (prioridad[5].first.first=='C' || prioridad[5].first.first=='S' || prioridad[5].first.first=='X' || prioridad[5].first.first=='D' || (permite_agua && prioridad[5].first.first=='A') ) return prioridad[5].first.second;
+	else if (prioridad[6].first.first=='C' || prioridad[6].first.first=='S' || prioridad[6].first.first=='X' || prioridad[6].first.first=='D' || (permite_agua && prioridad[6].first.first=='A') ) return prioridad[6].first.second;
+	else if (prioridad[7].first.first=='C' || prioridad[7].first.first=='S' || prioridad[7].first.first=='X' || prioridad[7].first.first=='D' || (permite_agua && prioridad[7].first.first=='A') ) return prioridad[7].first.second;
 	else return -1;	
 }
 
@@ -793,7 +815,7 @@ Action ComportamientoRescatador::ComportamientoRescatadorNivel_1(Sensores sensor
 		ViableR( tiene_zapatillas, visitada_local, superficie_local, cotas_local, sensores.cota[0], entidades_local );
 
 		//pos -> [0,7]
-		int pos = VeoCasillaInteresanteR_Nivel1( tiene_zapatillas, visitada_local, superficie_local );
+		int pos = VeoCasillaInteresanteR_Nivel1( tiene_zapatillas, visitada_local, superficie_local, sensores );
 
 		switch(pos)
 		{	
