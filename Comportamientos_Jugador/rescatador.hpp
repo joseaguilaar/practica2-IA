@@ -5,8 +5,30 @@
 #include <time.h>
 #include <thread>
 #include <iostream>
+#include <list>
+
 
 #include "comportamientos/comportamiento.hpp"
+
+struct EstadoR {
+  int f;
+  int c;
+  int brujula;
+  bool zapatillas;
+  bool operator==(const EstadoR &st) const{
+  return f == st.f && c == st.c && brujula == st.brujula && zapatillas ==
+  st.zapatillas;
+  }
+};
+
+struct NodoR{
+  EstadoR estado;
+  int coste;
+  list<Action> secuencia;
+
+  bool operator==(const NodoR &node) const{ return estado == node.estado; }
+  bool operator<(const NodoR& n) const { return coste > n.coste; } 
+};
 
 class ComportamientoRescatador : public Comportamiento
 {
@@ -37,9 +59,11 @@ public:
   }
 
   /*************************************************************************/
+  // Inicializar Variables de Estado Niveles 2,3
   ComportamientoRescatador(std::vector<std::vector<unsigned char>> mapaR, std::vector<std::vector<unsigned char>> mapaC) : Comportamiento(mapaR,mapaC)
   {
-    // Inicializar Variables de Estado Niveles 2,3
+    hayPlan = false;
+    tiene_zapatillas = false;
   }
 
   /*************************************************************************/
@@ -58,6 +82,12 @@ public:
   Action ComportamientoRescatadorNivel_3(Sensores sensores);
   Action ComportamientoRescatadorNivel_4(Sensores sensores);
 
+  void PintaPlan(const list<Action> &plan, bool zap);
+  void VisualizaPlan(const EstadoR &st,
+                     const list<Action> &plan);
+
+
+
 private:
   // Variables de Estado, son la memoria que tendra el agente de iteraciones/movimientos anteriores
   Action last_action; //ultimo movimiento realizado por el agente
@@ -72,10 +102,9 @@ private:
   vector<unsigned char> superficie_local; //estos 3 me hacen falta para la funcion viable
   vector<unsigned char> cotas_local;
   vector<unsigned char> entidades_local;
-
-  vector<pair<int,bool>> visitada_CV; //vector de pares con las veces visitadas y viabilidad de 
-                                      //las casillas del cono de vision
-
+  
+  list<Action> plan;
+  bool hayPlan;
 };
 
 #endif

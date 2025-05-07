@@ -1,6 +1,8 @@
 #include "../Comportamientos_Jugador/auxiliar.hpp"
 #include <iostream>
 #include <algorithm>
+#include <set>
+#include <queue>
 #include "motorlib/util.h"
 
 using namespace std;
@@ -18,11 +20,11 @@ Action ComportamientoAuxiliar::think(Sensores sensores)
 		accion = ComportamientoAuxiliarNivel_1 (sensores);
 		break;
 	case 2:
-		// accion = ComportamientoAuxiliarNivel_2 (sensores);
+		accion = ComportamientoAuxiliarNivel_2 (sensores);
 		break;
 	case 3:
-		// accion = ComportamientoAuxiliarNivel_3 (sensores);
-		accion = ComportamientoAuxiliarNivel_E (sensores);
+		accion = ComportamientoAuxiliarNivel_3 (sensores);
+		//accion = ComportamientoAuxiliarNivel_E (sensores);
 		break;
 	case 4:
 		// accion = ComportamientoAuxiliarNivel_4 (sensores);
@@ -36,6 +38,13 @@ int ComportamientoAuxiliar::interact(Action accion, int valor)
 {
 	return 0;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//--------------------------------NIVELES 0,1-----------------------------------
+//
+////////////////////////////////////////////////////////////////////////////////
+
 
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
@@ -698,8 +707,6 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_0(Sensores sensores)
 	return (accion);
 }
 
-
-
 /************************************************************************/
 // Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
 int VeoCasillaInteresanteA_Nivel1( bool zap, vector<int> v_l, vector<unsigned char> s_l )
@@ -806,28 +813,11 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_1(Sensores sensores)
 	return (accion);
 }
 
-Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_2(Sensores sensores)
-{
-}
-
-Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_3(Sensores sensores)
-{
-}
-
-Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_4(Sensores sensores)
-{
-}
-
-list<Action> AvanzaASaltosDeCaballo()
-{
-	list<Action> secuencia;
-	secuencia.push_back(WALK);
-	secuencia.push_back(WALK);
-	secuencia.push_back(TURN_SR);
-	secuencia.push_back(TURN_SR);
-	secuencia.push_back(WALK);
-	return secuencia;
-}
+////////////////////////////////////////////////////////////////////////////////
+//
+//-------------------------------NIVELES 2,3,4----------------------------------
+//
+////////////////////////////////////////////////////////////////////////////////
 
 /************************************************************************/
 bool Find (const NodoA & st, const list<NodoA> &lista){
@@ -849,7 +839,6 @@ void AnularMatrizA(vector<vector<unsigned char>> &m)
 		}
 	}
 }
-
 
 /************************************************************************/
 EstadoA NextCasillaAuxiliar(const EstadoA &st){
@@ -884,6 +873,7 @@ EstadoA NextCasillaAuxiliar(const EstadoA &st){
 	case noroeste:
 		siguiente.f = st.f - 1;
 		siguiente.c = st.c - 1;
+		break;
 	}
 	return siguiente;
 }
@@ -911,7 +901,7 @@ EstadoA applyA(Action accion, const EstadoA & st, const vector<vector<unsigned c
 	switch(accion){
 	case WALK:
 		if (CasillaAccesibleAuxiliar(st,terreno,altura)){
-		next = NextCasillaAuxiliar(st);
+			next = NextCasillaAuxiliar(st);
 		}
 		break;
 	case TURN_SR:
@@ -922,25 +912,15 @@ EstadoA applyA(Action accion, const EstadoA & st, const vector<vector<unsigned c
 }
 
 /************************************************************************/
-/**
- * @brief Primera versión del algoritmo de Búsqueda en Anchura para el agente Auxiliar.
- *
- * @param inicio  Estado inicial de la búsqueda
- * @param final   Estado final de la búsqueda (solo importan fila y columna)
- * @param terreno Matriz con el tipo de terreno de cada casilla
- * @param altura  Matriz con la cota de cada casilla
- * @return        La secuencia de acciones que lleva desde @p inicio hasta @p final
- * @note          Devuelve un plan vacío si no encuentra un camino válido
- */
 list<Action> ComportamientoAuxiliar::AnchuraAuxiliar(
         const EstadoA &inicio, const EstadoA &final,
         const vector<vector<unsigned char>> &terreno,
         const vector<vector<unsigned char>> &altura)
 {
     NodoA current_node;
-    list<NodoA> frontier;
-    list<NodoA> explored;
-    list<Action> path;
+    list<NodoA> frontier; //nodos pendientes de explorar
+    set<NodoA> explored; //nodos ya explorados
+    list<Action> path;    //solucion
 
     // Nodo raíz
     current_node.estado = inicio;           // Estado inicial
@@ -952,7 +932,7 @@ list<Action> ComportamientoAuxiliar::AnchuraAuxiliar(
     while (!SolutionFound && !frontier.empty()) {
 
         frontier.pop_front();
-        explored.push_back(current_node);
+        explored.insert(current_node);
 
         // Si cae en una casilla con Zapatillas, las adquiere
         if (terreno[current_node.estado.f][current_node.estado.c] == 'D') {
@@ -969,8 +949,8 @@ list<Action> ComportamientoAuxiliar::AnchuraAuxiliar(
             current_node    = child_WALK;
             SolutionFound   = true;
         }
-        else if (!Find(child_WALK, frontier) && !Find(child_WALK, explored)) {
-            // Añadimos el hijo a la frontera
+        else if ( explored.find(child_WALK) == explored.end() ) {
+            // Añadimos el hijo a la fronteras
             child_WALK.secuencia.push_back(WALK);
             frontier.push_back(child_WALK);
         }
@@ -980,7 +960,7 @@ list<Action> ComportamientoAuxiliar::AnchuraAuxiliar(
             NodoA child_TURN_SR = current_node;
             child_TURN_SR.estado = applyA(TURN_SR, current_node.estado, terreno, altura);
 
-            if (!Find(child_TURN_SR, frontier) && !Find(child_TURN_SR, explored)) {
+            if ( explored.find(child_TURN_SR) == explored.end() ) {
                 child_TURN_SR.secuencia.push_back(TURN_SR);
                 frontier.push_back(child_TURN_SR);
             }
@@ -989,8 +969,10 @@ list<Action> ComportamientoAuxiliar::AnchuraAuxiliar(
         /* ---------- 3. Paso al siguiente nodo ---------- */
         if (!SolutionFound && !frontier.empty()) {
             current_node  = frontier.front();
-            SolutionFound = (current_node.estado.f == final.f &&
-                             current_node.estado.c == final.c);
+            while( explored.find(current_node) != explored.end() && !frontier.empty() ){
+				frontier.pop_front();
+				current_node = frontier.front();
+			}
         }
     }
 
@@ -1055,9 +1037,130 @@ void ComportamientoAuxiliar::VisualizaPlan(const EstadoA &st, const list<Action>
 	}
 }
 
+/************************************************************************/
+int costeEnergiaA( EstadoA &inicio, EstadoA &fin, Action &a, const vector<vector<unsigned char>> &terreno,
+				  const vector<vector<unsigned char>> &altura)
+{
+	int coste = 0;
+	unsigned char terr = terreno[inicio.f][inicio.c];
+	int incr = 0;
+
+	int difAlt =  altura[fin.f][fin.c] - altura[inicio.f][inicio.c];
+
+	switch(a){
+	
+	case (TURN_SR):
+
+		switch(terr){
+
+		case('A'):
+			coste = 16;
+			break;
+		case('T'):
+			coste = 3;
+			break;
+		default:
+			coste = 1;
+			break;
+		}
+		break;
+	
+	case (WALK):
+
+		switch(terr){
+		case('A'):
+			
+			if( difAlt<0 ) incr = -10;
+			else if( difAlt>0 ) incr = 10;
+			else incr = 0;
+
+			coste = 100 + incr;
+			break;
+		
+		case('T'):
+
+			if( difAlt<0 ) incr = -5;
+			else if( difAlt>0 ) incr = 5;
+			else incr = 0;
+
+			coste = 20 + incr;
+			break;
+		
+		case('S'):
+			if( difAlt<0 ) incr = -1;
+			else if( difAlt>0 ) incr = 1;
+			else incr = 0;
+
+			coste = 2 + incr;
+			break;
+		
+		default: 
+			coste = 1;
+			break;
+
+		}
+		break;
+	}
+
+	return (coste);
+}
 
 
+list<Action> AEstrella( const EstadoA &inicio, const EstadoA &fin, vector<vector<unsigned char>> &terreno, vector<vector<unsigned char>> &altura )
+{
+	priority_queue<NodoA> pq;
+    
+	//matriz cuatridimensional con 8 rumbos por cada casilla(fil,col), con el coste minimo para llegar a esa fil,col,rumbo
+	vector<vector<vector<vector<int>>>> coste_min( terreno.size(),vector<vector<vector<int>>>( terreno[0].size(), vector<vector<int>>(8, vector<int>(2, numeric_limits<int>::max()))));
+	
+	coste_min[inicio.f][inicio.c][inicio.brujula][inicio.zapatillas ? 1 : 0 ] = 0;
 
+	int heur = abs(fin.f - inicio.f) + abs(fin.c - inicio.c); 
+
+	pq.push({inicio, 0, heur, {}});
+
+	while( !pq.empty() ){
+
+		auto it = pq.top();
+		pq.pop();
+		
+		//si el nodo esta sobre el destino
+		if( it.estado.f == fin.f && it.estado.c == fin.c ){
+			return(it.secuencia);
+		}
+		
+		if( terreno[it.estado.f][it.estado.c] == 'D' ){
+			it.estado.zapatillas = true;
+		}
+
+		for( Action a: {WALK, RUN, TURN_L, TURN_SR}){
+				
+			EstadoA next = applyA(a, it.estado, terreno, altura);
+
+			if( !(next == it.estado) ){ 							//si son iguales, no es casilla accesible
+				
+				int c = costeEnergiaA( it.estado, next, a, terreno, altura );
+				
+				if( c+it.coste < coste_min[next.f][next.c][next.brujula][next.zapatillas ? 1 : 0] ){ //si es la forma menos costosa de alcazar esa fil,col,rumbo (asi no tendremos repetidos)
+
+					coste_min[next.f][next.c][next.brujula][next.zapatillas ? 1 : 0] = c+it.coste;   //actualizamos
+
+					list<Action> sec = it.secuencia;
+					sec.push_back(a);
+
+					heur = abs(fin.f - next.f) + abs(fin.c - next.c);     //calculamos heuristica
+					
+					pq.push({next, c+it.coste, c+it.coste + heur, sec});                  //añadimos nuevo nodo candidato
+				}
+			}
+		}
+	}
+
+	return (list<Action>());
+}
+
+
+/************************************************************************/
 Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_E(Sensores sensores)
 {
 	Action accion = IDLE;
@@ -1075,7 +1178,7 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_E(Sensores sensores)
 		VisualizaPlan(inicio,plan);
 		hayPlan = plan.size() != 0 ;
 	}
-	if (hayPlan and plan.size()>0){
+	if (hayPlan && plan.size()>0){
 		accion = plan.front();
 		plan.pop_front();
 	}
@@ -1085,3 +1188,41 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_E(Sensores sensores)
 
 	return accion;
 }
+
+Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_2(Sensores sensores)
+{
+	return (IDLE);
+}
+
+Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_3(Sensores sensores)
+{
+	Action accion = IDLE;
+
+	if (!hayPlan){
+		// Invocar al método de búsqueda
+		EstadoA inicio, fin;
+		inicio.f = sensores.posF;
+		inicio.c = sensores.posC;
+		inicio.brujula = sensores.rumbo;
+		inicio.zapatillas = tiene_zapatillas;
+		fin.f = sensores.destinoF;
+		fin.c = sensores.destinoC;
+		plan = AEstrella(inicio, fin, mapaResultado, mapaCotas);
+		VisualizaPlan(inicio,plan);
+		hayPlan = plan.size() != 0 ;
+	}
+	if (hayPlan && plan.size()>0){
+		accion = plan.front();
+		plan.pop_front();
+	}
+	if (plan.size()== 0){
+		hayPlan = false;
+	}
+
+	return accion;
+}
+
+Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_4(Sensores sensores)
+{
+}
+

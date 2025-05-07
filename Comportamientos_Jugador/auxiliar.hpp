@@ -21,10 +21,12 @@ struct EstadoA {
 
 struct NodoA{
   EstadoA estado;
+  int coste;
+  int costeYheur;
   list<Action> secuencia;
-  bool operator==(const NodoA &node) const{
-  return estado == node.estado;
-  }
+
+  bool operator==(const NodoA &node) const{ return estado == node.estado; }
+  bool operator<(const NodoA& n) const { return coste > n.coste; } 
 };
 
 class ComportamientoAuxiliar : public Comportamiento
@@ -57,9 +59,9 @@ public:
   }
 
   /*************************************************************************/
+  // Inicializar Variables de Estado Niveles 2,3
   ComportamientoAuxiliar(std::vector<std::vector<unsigned char>> mapaR, std::vector<std::vector<unsigned char>> mapaC) : Comportamiento(mapaR,mapaC)
   {
-    //nivel 2,3,4
     hayPlan = false;
     tiene_zapatillas = false;
   }
@@ -107,9 +109,6 @@ private:
   //nivel 2,3,4
   list<Action> plan;
   bool hayPlan;
-
-
-
 };
 
 #endif
