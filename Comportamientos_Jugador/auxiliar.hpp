@@ -55,6 +55,7 @@ public:
     cotas_local.assign(8, 0);
     entidades_local .assign(8, ' ');
 
+    last_punto = {-1,-1};
 
   }
 
@@ -79,6 +80,12 @@ public:
   Action ComportamientoAuxiliarNivel_2(Sensores sensores);
   Action ComportamientoAuxiliarNivel_3(Sensores sensores);
   Action ComportamientoAuxiliarNivel_4(Sensores sensores);
+
+  Action RecargaEnergia(Sensores sensores);
+
+
+  Action ComportamientoReactivo_A(Sensores sensores);
+
 
   Action ComportamientoAuxiliarNivel_E(Sensores sensores);
 
@@ -109,6 +116,8 @@ private:
   //nivel 2,3,4
   list<Action> plan;
   bool hayPlan;
+
+  pair<int,int> last_punto;
 };
 
 #endif

@@ -30,6 +30,16 @@ struct NodoR{
   bool operator<(const NodoR& n) const { return coste > n.coste; } 
 };
 
+struct NodoR4{
+  EstadoR estado;
+  int coste;
+  int costeYheur;
+  list<Action> secuencia;
+
+  bool operator==(const NodoR4 &node) const{ return estado == node.estado; }
+  bool operator<(const NodoR4& n) const { return coste > n.coste; } 
+};
+
 class ComportamientoRescatador : public Comportamiento
 {
 
@@ -56,6 +66,17 @@ public:
     superficie_local.assign(8, ' ');
     cotas_local.assign(8, 0);
     entidades_local .assign(8, ' ');
+
+    permite_agua = false;
+
+    hayPlan = false;
+
+    avisado = false;
+    recargando = false;
+    last_point = {-1,-1};
+    rentaRecarga = true;
+
+
   }
 
   /*************************************************************************/
@@ -82,6 +103,9 @@ public:
   Action ComportamientoRescatadorNivel_3(Sensores sensores);
   Action ComportamientoRescatadorNivel_4(Sensores sensores);
 
+  Action ComportamientoReactivo_R(Sensores sensores);
+
+
   void PintaPlan(const list<Action> &plan, bool zap);
   void VisualizaPlan(const EstadoR &st,
                      const list<Action> &plan);
@@ -102,9 +126,18 @@ private:
   vector<unsigned char> superficie_local; //estos 3 me hacen falta para la funcion viable
   vector<unsigned char> cotas_local;
   vector<unsigned char> entidades_local;
+
+  bool permite_agua;
   
   list<Action> plan;
   bool hayPlan;
+
+  bool recargando;
+  bool rentaRecarga;
+
+  bool avisado;
+  pair<int,int> last_point;
+
 };
 
 #endif

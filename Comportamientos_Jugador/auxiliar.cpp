@@ -27,7 +27,7 @@ Action ComportamientoAuxiliar::think(Sensores sensores)
 		//accion = ComportamientoAuxiliarNivel_E (sensores);
 		break;
 	case 4:
-		// accion = ComportamientoAuxiliarNivel_4 (sensores);
+		accion = ComportamientoAuxiliarNivel_4 (sensores);
 		break;
 	}
 
@@ -1093,7 +1093,11 @@ int costeEnergiaA( EstadoA &inicio, EstadoA &fin, Action &a, const vector<vector
 
 			coste = 2 + incr;
 			break;
-		
+
+		case('?'):
+			coste = 1000;    //para que la prioridad sea ir por caminos conocidos
+			break;
+
 		default: 
 			coste = 1;
 			break;
@@ -1105,7 +1109,7 @@ int costeEnergiaA( EstadoA &inicio, EstadoA &fin, Action &a, const vector<vector
 	return (coste);
 }
 
-
+/************************************************************************/
 list<Action> AEstrella( const EstadoA &inicio, const EstadoA &fin, vector<vector<unsigned char>> &terreno, vector<vector<unsigned char>> &altura )
 {
 	priority_queue<NodoA> pq;
@@ -1133,7 +1137,7 @@ list<Action> AEstrella( const EstadoA &inicio, const EstadoA &fin, vector<vector
 			it.estado.zapatillas = true;
 		}
 
-		for( Action a: {WALK, RUN, TURN_L, TURN_SR}){
+		for( Action a: {WALK, TURN_SR}){
 				
 			EstadoA next = applyA(a, it.estado, terreno, altura);
 
@@ -1159,6 +1163,209 @@ list<Action> AEstrella( const EstadoA &inicio, const EstadoA &fin, vector<vector
 	return (list<Action>());
 }
 
+/************************************************************************/
+bool CasillaAccesibleA_nivel4(const EstadoA &st, const vector<vector<unsigned char>> &terreno,
+							  const vector<vector<unsigned char>> &altura, const vector<vector<unsigned char>> &entidades, bool planeando)
+{
+	EstadoA next = NextCasillaAuxiliar(st);
+	bool check1 = false, check2 = false, check3 = false, check4 = false;
+
+	if( planeando ){
+		if( !(next.f>=3 && next.f<terreno.size()-3 && next.c>=3 && next.c<terreno.size()-3)){ return false; }
+		if( terreno[next.f][next.c] == '?'){ return true; }
+	}
+
+	check1 = terreno[next.f][next.c] != 'P' && terreno[next.f][next.c] != 'M';
+	check2 = terreno[next.f][next.c] != 'B' || (terreno[next.f][next.c] =='B' && st.zapatillas);
+	check3 = abs(altura[next.f][next.c] - altura[st.f][st.c]) <= 1;
+	check4 = (entidades[next.f][next.c] != 'r');
+
+	return (check1 && check2 && check3 && check4);
+}
+
+/************************************************************************/
+EstadoA applyA_nivel4(Action accion, const EstadoA &st, const vector<vector<unsigned char>> &terreno,
+			   const vector<vector<unsigned char>> &altura, const vector<vector<unsigned char>> &agentes)
+{
+	EstadoA next = st;
+
+	switch(accion){
+	case TURN_SR:
+		next.brujula = (next.brujula+1)%8;
+		break;
+
+	case WALK:				
+	
+		if (CasillaAccesibleA_nivel4(st,terreno,altura,agentes, true)){
+			next = NextCasillaAuxiliar(st);
+		}
+		break;
+	}
+	return (next);
+}
+
+/************************************************************************/
+list<Action> AEstrellaA_nivel4( const EstadoA &inicio, const EstadoA &fin, vector<vector<unsigned char>> &terreno, vector<vector<unsigned char>> &altura, vector<vector<unsigned char>> &agentes )
+{
+	priority_queue<NodoA> pq;
+    
+	//matriz cuatridimensional con 8 rumbos por cada casilla(fil,col), con el coste minimo para llegar a esa fil,col,rumbo
+	vector<vector<vector<vector<int>>>> coste_min( terreno.size(),vector<vector<vector<int>>>( terreno[0].size(), vector<vector<int>>(8, vector<int>(2, numeric_limits<int>::max()))));
+	
+	coste_min[inicio.f][inicio.c][inicio.brujula][inicio.zapatillas ? 1 : 0 ] = 0;
+
+	int heur = abs(fin.f - inicio.f) + abs(fin.c - inicio.c); 
+
+	pq.push({inicio, 0, heur, {}});
+
+	while( !pq.empty() ){
+
+		auto it = pq.top();
+		pq.pop();
+		
+		//si el nodo esta sobre el destino
+		if( it.estado.f == fin.f && it.estado.c == fin.c ){
+			return(it.secuencia);
+		}
+		
+		if( terreno[it.estado.f][it.estado.c] == 'D' ){
+			it.estado.zapatillas = true;
+		}
+
+		for( Action a: {WALK, TURN_SR}){
+				
+			EstadoA next = applyA_nivel4(a, it.estado, terreno, altura, agentes);
+
+			if( !(next == it.estado) ){ 							//si son iguales, no es casilla accesible
+				
+				int c = costeEnergiaA( it.estado, next, a, terreno, altura );
+				
+				if( c+it.coste < coste_min[next.f][next.c][next.brujula][next.zapatillas ? 1 : 0] ){ //si es la forma menos costosa de alcazar esa fil,col,rumbo (asi no tendremos repetidos)
+
+					coste_min[next.f][next.c][next.brujula][next.zapatillas ? 1 : 0] = c+it.coste;   //actualizamos
+
+					list<Action> sec = it.secuencia;
+					sec.push_back(a);
+
+					heur = abs(fin.f - next.f) + abs(fin.c - next.c);     //calculamos heuristica
+					
+					pq.push({next, c+it.coste, c+it.coste + heur, sec});                  //añadimos nuevo nodo candidato
+				}
+			}
+		}
+	}
+
+	return (list<Action>());
+}
+
+
+/************************************************************************/
+// Devuelve la casilla mas interesante de entre las 3 que tiene delante, en orden
+int VeoCasillaInteresanteA_Nivel4( bool zap, vector<int> v_l, vector<unsigned char> s_l )
+{
+	//buscamos zapatillas
+	for( int i=0; i<8 && !zap ; i++ ){
+		if( s_l[i] == 'D' ) return i;
+	}
+
+	for( int i: {7,0,1} ){
+		if( s_l[i] == 'X' ) return i;
+	}
+
+	//mejor resultado:
+	vector<pair<pair<char,int>, int>> prioridad({ {{s_l[1],1},v_l[1]-1}, {{s_l[2],2},v_l[2]+1}, {{s_l[0],0},v_l[0]+1}, 
+												  {{s_l[3],3},v_l[3]+2}, {{s_l[7],7},v_l[7]+2}, {{s_l[4],4},v_l[4]+3}, 
+												  {{s_l[6],6},v_l[6]+3}, {{s_l[5],5},v_l[5]+5}  
+	});
+
+
+	//ordenamos en funcion del valor entero, pero manteniendose en la misma posicion
+	//los enteros que sean iguales (por defecto: {1,0,2,7,3,6,4,5})
+	stable_sort(prioridad.begin(), prioridad.end(), 
+	[](const std::pair<pair<char,int>, int>& a, const std::pair<pair<char,int>, int>& b) { return a.second < b.second; });
+
+	if ( prioridad[0].first.first !='P' && prioridad[0].first.first!='M' && ( prioridad[0].first.first!='B' || (zap && prioridad[0].first.first=='B') ) ) return prioridad[0].first.second;
+	else if ( prioridad[1].first.first!='P' && prioridad[1].first.first!='M' && ( prioridad[1].first.first!='B' || (zap && prioridad[1].first.first=='B') ) ) return prioridad[1].first.second;
+	else if ( prioridad[2].first.first!='P' && prioridad[2].first.first!='M' && ( prioridad[2].first.first!='B' || (zap && prioridad[2].first.first=='B') ) ) return prioridad[2].first.second;
+	else if ( prioridad[3].first.first!='P' && prioridad[3].first.first!='M' && ( prioridad[3].first.first!='B' || (zap && prioridad[3].first.first=='B') ) ) return prioridad[3].first.second;
+	else if ( prioridad[4].first.first!='P' && prioridad[4].first.first!='M' && ( prioridad[4].first.first!='B' || (zap && prioridad[4].first.first=='B') ) ) return prioridad[4].first.second;
+	else if ( prioridad[5].first.first!='P' && prioridad[5].first.first!='M' && ( prioridad[5].first.first!='B' || (zap && prioridad[5].first.first=='B') ) ) return prioridad[5].first.second;
+	else if ( prioridad[6].first.first!='P' && prioridad[6].first.first!='M' && ( prioridad[6].first.first!='B' || (zap && prioridad[6].first.first=='B') )  ) return prioridad[6].first.second;
+	else if ( prioridad[7].first.first!='P' && prioridad[7].first.first!='M' && ( prioridad[7].first.first!='B' || (zap && prioridad[7].first.first=='B') ) ) return prioridad[7].first.second;
+	else return -1;
+}
+
+/************************************************************************/
+Action ComportamientoAuxiliar::ComportamientoReactivo_A(Sensores sensores)
+{
+	// El comportamiento de seguir por un Auxiliar por un camino hasta encontrar un puesto base.
+	Action accion;
+	
+	//Fase 1, actualizar variables de estado
+	if (sensores.superficie[0] == 'D') tiene_zapatillas = true;
+
+	SituarSensorEnMapaA( mapaResultado, mapaCotas, mapaEntidades, mapaVisitadas, sensores );
+
+	InicializarVisitadaLocalA( mapaResultado, mapaVisitadas, visitada_local, sensores );
+	InicializarSuperficieLocalA( mapaResultado, superficie_local, sensores );
+	InicializarCotasLocalA( mapaCotas, cotas_local, sensores );
+	InicializarEntidadesLocalA( mapaEntidades, entidades_local, sensores );
+
+	//Fase 2, determinar siguiente accion a realizar
+	if(sensores.energia <= 3){
+		accion = IDLE;
+	}
+    else if( giroSR != 0 ){ //estamos en medio de un giro TURN_SL
+		accion = TURN_SR;
+		giroSR--;
+	}
+	else{
+
+		ViableA( visitada_local, superficie_local, cotas_local, sensores.cota[0], entidades_local );
+
+		int pos = VeoCasillaInteresanteA_Nivel4( tiene_zapatillas, visitada_local, superficie_local );
+
+		switch(pos)
+		{	
+			case 1:
+				accion = WALK;      //WALK
+				break;
+			case 0:			
+				giroSR = 6;
+				accion = TURN_SR;
+				break;
+			case 2:		
+				accion = TURN_SR;   //TURN_SR
+				break;
+			case 7:                 //TURN_L
+				giroSR = 5;
+				accion = TURN_SR;
+				break;
+			case 3:					//TURN_R
+				giroSR = 1;
+				accion = TURN_SR;
+				break;
+			case 6: 			    //2*TURN_L + TURN_SR
+				giroSR = 4;
+				accion = TURN_SR;
+				break;
+			case 4:                 //3*TURN_SR
+				giroSR = 2;
+				accion = TURN_SR;
+				break;
+			case 5:					//2*TURN_L
+				giroSR = 3;
+				accion = TURN_SR;
+				break;
+			case -1:                //si no hay ninguna casilla interesante gira hacia la izquierda para seguir buscando
+				accion = TURN_SR;
+				break;
+		}
+	}
+
+	last_action = accion;
+	return (accion);
+}
 
 /************************************************************************/
 Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_E(Sensores sensores)
@@ -1224,5 +1431,62 @@ Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_3(Sensores sensores)
 
 Action ComportamientoAuxiliar::ComportamientoAuxiliarNivel_4(Sensores sensores)
 {
+	Action accion = IDLE;
+	SituarSensorEnMapaA( mapaResultado, mapaCotas, mapaEntidades, mapaVisitadas, sensores );
+
+	
+	if( sensores.destinoF!=-1 && sensores.destinoC!=-1 ){
+
+		if(sensores.superficie[0] == 'X' && sensores.energia < 2500 ) return (IDLE);
+
+		if(sensores.superficie[0] == 'D') tiene_zapatillas = true;
+
+		if (!hayPlan){
+			// Invocar al método de búsqueda
+			EstadoA inicio, fin;
+			inicio.f = sensores.posF;
+			inicio.c = sensores.posC;
+			inicio.brujula = sensores.rumbo;
+			inicio.zapatillas = tiene_zapatillas;
+			fin.f = sensores.destinoF;
+			fin.c = sensores.destinoC;
+			plan = AEstrellaA_nivel4(inicio, fin, mapaResultado, mapaCotas, mapaEntidades);
+			VisualizaPlan(inicio,plan);
+			hayPlan = plan.size() != 0;
+			
+		}
+
+		if (hayPlan && plan.size()>0){
+			accion = plan.front();
+			plan.pop_front();
+			
+			if( accion == WALK ){
+
+				if( sensores.agentes[2]=='v' || sensores.agentes[2]=='e' ){
+					plan.push_front(accion);
+					return (IDLE);
+				}
+
+				if( !CasillaAccesibleA_nivel4({sensores.posF,sensores.posC,sensores.rumbo,tiene_zapatillas}, mapaResultado, mapaCotas, mapaEntidades, false) ){
+					hayPlan = false;
+					return(IDLE);
+				}
+			}
+			
+		}
+		else{
+			cerr<<"NOPLAN";
+			accion = ComportamientoReactivo_A(sensores);
+		}
+	
+		if (plan.size()== 0){
+			hayPlan = false;
+		}
+
+	}
+	else{
+		AnularMatrizA(mapaConPlan);
+	}
+	return (accion);
 }
 
